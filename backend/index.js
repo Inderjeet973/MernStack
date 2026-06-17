@@ -4,6 +4,13 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 
 const app = express();
+const taskRoutes = require('../backend/routes/TaskRouter');
+
+const cors = require('cors')
+app.use(cors())
+app.use(express.json());
+
+app.use('/api/tasks',taskRoutes)
 
 mongoose
   .connect(process.env.MONGO_URI)

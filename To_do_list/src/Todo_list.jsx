@@ -1,14 +1,49 @@
+
+
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import API from "./api";
 import "./Todo.css";
 
-export default function Todo_List({ todos, setTodos }) {
+export default function Todo_List() {
   const navigate = useNavigate();
 
-  const deleteTodo = (id) => {
-    const updated = todos.filter((todo) => todo.id !== id);
-    setTodos(updated);
+  const [todos, setTodos] = useState([]);
+
+  // Fetch all tasks
+  const fetchTasks = async () => {
+    try {
+      const res = await API.get("/");
+      setTodos(res.data.data);
+    } catch (err) {
+      console.log(err);
+    }
   };
 
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  // Delete Task
+  const deleteTodo = async (id) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this task?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await API.delete(`/delete/${id}`);
+
+      alert("Task Deleted Successfully");
+
+      fetchTasks();
+    } catch (err) {
+      alert(err.response?.data?.message || "Something went wrong");
+    }
+  };
+
+  // Edit Task
   const editTodo = (todo) => {
     navigate("/", {
       state: {
@@ -19,7 +54,6 @@ export default function Todo_List({ todos, setTodos }) {
 
   return (
     <div className="todo-container">
-
       <h1>All Todos</h1>
 
       <button
@@ -30,7 +64,6 @@ export default function Todo_List({ todos, setTodos }) {
       </button>
 
       <table>
-
         <thead>
           <tr>
             <th>ID</th>
@@ -42,40 +75,44 @@ export default function Todo_List({ todos, setTodos }) {
         </thead>
 
         <tbody>
+          {todos.length > 0 ? (
+            todos.map((todo) => (
+              <tr key={todo._id}>
+                <td>{todo._id}</td>
 
-          {todos.map((todo) => (
+                <td>{todo.name}</td>
 
-            <tr key={todo.id}>
-              <td>{todo.id}</td>
-              <td>{todo.text}</td>
-              <td>{todo.date}</td>
-              <td>{todo.priority}</td>
+                <td>{todo.date.split("T")[0]}</td>
 
-              <td>
+                <td>{todo.priority}</td>
 
-                <button
-                  className="edit-btn"
-                  onClick={() => editTodo(todo)}
-                >
-                  Edit
-                </button>
+                <td>
+                  <button
+                    className="edit-btn"
+                    onClick={() => editTodo(todo)}
+                  >
+                    Edit
+                  </button>
 
-                <button
-                  className="delete-btn"
-                  onClick={() => deleteTodo(todo.id)}
-                >
-                  Delete
-                </button>
-
+                  <button
+                    className="delete-btn"
+                    onClick={() => deleteTodo(todo._id)}
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="5" className="empty">
+                No Tasks Found
               </td>
             </tr>
-
-          ))}
-
+          )}
         </tbody>
-
       </table>
-
     </div>
   );
 }
+
