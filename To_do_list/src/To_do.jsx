@@ -1,149 +1,105 @@
+
+
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import API from "./api";
 import "./Todo.css";
-import { useLocation } from "react-router-dom";
-export default function To_do({ todos, setTodos }) {
+
+export default function To_do() {
+  const [todos, setTodos] = useState([]);
   const [item, setItem] = useState("");
   const [date, setDate] = useState("");
   const [priority, setPriority] = useState("Medium");
   const [editId, setEditId] = useState(null);
+
   const location = useLocation();
-  const nav = useNavigate()
+  const navigate = useNavigate();
+
+  // Fetch all tasks
+  const fetchTasks = async () => {
+    try {
+      const res = await API.get("/");
+      setTodos(res.data.data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   useEffect(() => {
-  if (location.state?.todo) {
-    const todo = location.state.todo;
+    fetchTasks();
 
-    setItem(todo.text);
-    setDate(todo.date);
-    setPriority(todo.priority);
-    setEditId(todo.id);
-  }
-}, [location.state]);
+    if (location.state?.todo) {
+      const todo = location.state.todo;
 
-//   const addTodo = (e) => {
-//     e.preventDefault();
+      setItem(todo.name);
+      setDate(todo.date.split("T")[0]);
+      setPriority(todo.priority);
+      setEditId(todo._id);
+    }
+  }, [location.state]);
 
-//     if (item.trim() === "") return;
+  const addTodo = async (e) => {
+    e.preventDefault();
 
-//     if (editId) {
-//       const updated = todos.map((todo) =>
-//         todo.id === editId
-//           ? {
-//               ...todo,
-//               text: item,
-//               date,
-//               priority,
-//             }
-//           : todo
-//       );
+    // Validation
+    if (item.trim() === "") {
+      alert("Task Name is required");
+      return;
+    }
 
-//       setTodos(updated);
-//       setEditId(null);
-//       alert("Todo Updated Successfully");
-//     } else {
-//       const newTodo = {
-//         id: Date.now(),
-//         text: item,
-//         date,
-//         priority,
-//       };
+    if (item.trim().length < 3) {
+      alert("Task should be at least 3 characters");
+      return;
+    }
 
-//       setTodos([...todos, newTodo]);
-//       alert("Todo Added Successfully");
-//     }
+    if (date === "") {
+      alert("Please select a date");
+      return;
+    }
 
-//     setItem("");
-//     setDate("");
-//     setPriority("Medium");
-//   };
-const addTodo = (e) => {
-  e.preventDefault();
+    try {
+      if (editId) {
+        await API.put(`/update/${editId}`, {
+          name: item,
+          date,
+          priority,
+        });
 
-  const today = new Date().toISOString().split("T")[0];
+        alert("Task Updated Successfully");
+        setEditId(null);
+      } else {
+        await API.post("/add", {
+          name: item,
+          date,
+          priority,
+        });
 
-  // Task Required
-  if (item.trim() === "") {
-    alert("Task name is required.");
-    return;
-  }
+        alert("Task Added Successfully");
+      }
 
-  // Minimum Length
-  if (item.trim().length < 3) {
-    alert("Task must be at least 3 characters.");
-    return;
-  }
+      setItem("");
+      setDate("");
+      setPriority("Medium");
 
-  // Maximum Length
-  if (item.trim().length > 50) {
-    alert("Task cannot exceed 50 characters.");
-    return;
-  }
+      fetchTasks();
 
-  // Date Required
-  if (date === "") {
-    alert("Please select a due date.");
-    return;
-  }
+      navigate("/list");
 
-  // Past Date Validation
-  if (date < today) {
-    alert("Past dates are not allowed.");
-    return;
-  }
+    } catch (err) {
+      alert(err.response?.data?.message || "Something went wrong");
+    }
+  };
 
-  // Duplicate Task Validation
-  const exists = todos.some(
-    (todo) =>
-      todo.text.toLowerCase() === item.toLowerCase() &&
-      todo.id !== editId
-  );
-
-  if (exists) {
-    alert("Task already exists.");
-    return;
-  }
-
-  if (editId) {
-    const updatedTodos = todos.map((todo) =>
-      todo.id === editId
-        ? {
-            ...todo,
-            text: item,
-            date,
-            priority,
-          }
-        : todo
-    );
-
-    setTodos(updatedTodos);
-    setEditId(null);
-    alert("Todo updated successfully!");
-    setTimeout(()=>{
-         nav('/list')
-    },200)
-  } else {
-    const newTodo = {
-      id: Date.now(),
-      text: item,
-      date,
-      priority,
-    };
-
-    setTodos([...todos, newTodo]);
-    alert("Todo added successfully!");
-  }
-
-  setItem("");
-  setDate("");
-  setPriority("Medium");
-};
   return (
     <div className="todo-container">
+
       <h1>Todo App</h1>
 
       <form onSubmit={addTodo} className="todo-form">
+
         <input
-          placeholder="Enter Todo"
+          type="text"
+          placeholder="Enter Task"
           value={item}
           onChange={(e) => setItem(e.target.value)}
         />
@@ -158,14 +114,15 @@ const addTodo = (e) => {
           value={priority}
           onChange={(e) => setPriority(e.target.value)}
         >
-          <option>High</option>
-          <option>Medium</option>
-          <option>Low</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
         </select>
 
-        <button className="add-btn">
+        <button className="add-btn" type="submit">
           {editId ? "Update" : "Add"}
         </button>
+
       </form>
 
       <Link to="/list">
@@ -173,6 +130,8 @@ const addTodo = (e) => {
           View Todos
         </button>
       </Link>
+
     </div>
   );
 }
+
