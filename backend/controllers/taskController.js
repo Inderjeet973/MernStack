@@ -1,12 +1,14 @@
+const Task = require("../models/taskmodel");
 
-
-const Task = require('../models/taskmodel')
-
-// Get All Tasks
+// =======================
+// Get Logged-in User Tasks
+// =======================
 
 const getTasks = async (req, res) => {
   try {
-    const tasks = await Task.find().sort({ createdAt: -1 });
+    const tasks = await Task.find({
+      userId: req.user.id,
+    }).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -21,8 +23,9 @@ const getTasks = async (req, res) => {
   }
 };
 
-
+// =======================
 // Add Task
+// =======================
 
 const addTask = async (req, res) => {
   try {
@@ -36,7 +39,7 @@ const addTask = async (req, res) => {
       });
     }
 
-    // Name Length
+    // Name Validation
     if (name.trim().length < 3) {
       return res.status(400).json({
         success: false,
@@ -74,9 +77,10 @@ const addTask = async (req, res) => {
       });
     }
 
-    // Duplicate Task Validation
+    // Duplicate Validation (Only for logged-in user)
     const taskExists = await Task.findOne({
       name: name.trim(),
+      userId: req.user.id,
     });
 
     if (taskExists) {
@@ -86,11 +90,12 @@ const addTask = async (req, res) => {
       });
     }
 
-    // Save Task
+    // Create Task
     const task = await Task.create({
       name: name.trim(),
       date,
       priority,
+      userId: req.user.id,
     });
 
     res.status(201).json({
@@ -107,12 +112,12 @@ const addTask = async (req, res) => {
   }
 };
 
-
+// =======================
 // Update Task
+// =======================
 
 const updateTask = async (req, res) => {
   try {
-
     const { name, date, priority } = req.body;
 
     if (!name || !date || !priority) {
@@ -122,8 +127,11 @@ const updateTask = async (req, res) => {
       });
     }
 
-    const task = await Task.findByIdAndUpdate(
-      req.params.id,
+    const task = await Task.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        userId: req.user.id,
+      },
       {
         name,
         date,
@@ -156,13 +164,16 @@ const updateTask = async (req, res) => {
   }
 };
 
-
+// =======================
 // Delete Task
+// =======================
 
 const deleteTask = async (req, res) => {
   try {
-
-    const task = await Task.findByIdAndDelete(req.params.id);
+    const task = await Task.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
 
     if (!task) {
       return res.status(404).json({
@@ -174,7 +185,6 @@ const deleteTask = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Task Deleted Successfully",
-      data: task,
     });
 
   } catch (err) {
@@ -191,9 +201,6 @@ module.exports = {
   updateTask,
   deleteTask,
 };
-
-
-
 
 
 
